@@ -3,7 +3,6 @@ package idg
 import (
 	"fmt"
 	"io"
-	"log"
 	"mime"
 	"net/http"
 	"os"
@@ -30,7 +29,7 @@ type File struct {
 	Dir         string
 	RemoteURL   string
 	AcceptRange bool
-	Wait        *sync.WaitGroup
+	wait        *sync.WaitGroup
 	FileParts   FileParts
 }
 
@@ -39,15 +38,15 @@ func NewFile(remoteURL string) (*File, error) {
 	file := &File{
 		RemoteURL: remoteURL,
 		Dir:       ".",
-		Wait:      &sync.WaitGroup{},
+		wait:      &sync.WaitGroup{},
 		FileParts: FileParts{},
 	}
 
-	res, err := http.DefaultClient.Get(remoteURL)
+	res, err := http.Get(remoteURL)
 	if err != nil {
 		return nil, err
 	}
-
+	defer res.Body.Close()
 	if res.StatusCode != 200 {
 		return nil, ErrFilePermission
 	}
@@ -71,7 +70,6 @@ func (file *File) StartDownload() error {
 		parts = 1
 	}
 
-	modBytes := file.Size % parts
 	rangeBytes := file.Size / parts
 	var lastBytes int64
 
@@ -87,23 +85,26 @@ func (file *File) StartDownload() error {
 		lastBytes = endByte
 	}
 
-	if modBytes > 0 {
-		filePart := NewPart(file, parts+1, lastBytes, file.Size)
+	if lastBytes < file.Size {
+		filePart := NewPart(file, parts+1, lastBytes+1, file.Size)
 		file.FileParts = append(file.FileParts, filePart)
 		filePart.startDownload()
 	}
 
-	file.Wait.Wait()
+	file.Wait()
 
 	return file.join()
 }
 
+func (file *File) Wait() {
+	file.wait.Wait()
+}
+
 func (file *File) join() error {
 
-	path := file.Dir + "/" + file.Name
-	fileWriter, err := os.Create(path)
+	fileWriter, err := os.Create(file.getPath())
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 		return err
 	}
 
@@ -111,7 +112,7 @@ func (file *File) join() error {
 	for _, part := range file.FileParts {
 		reader, err := os.Open(part.getPath())
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
 			return err
 		}
 		if _, err := io.Copy(fileWriter, reader); err != nil {
@@ -120,7 +121,12 @@ func (file *File) join() error {
 		os.Remove(part.getPath())
 	}
 
+	fileWriter.Close()
 	return nil
+}
+
+func (file *File) getPath() string {
+	return file.Dir + "/" + file.Name
 }
 
 func GetFilePartName(fileName string, part int64) string {

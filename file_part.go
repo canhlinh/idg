@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"os"
 )
 
@@ -34,15 +33,12 @@ func NewPart(file *File, partNumber, fromByte, toByte int64) *FilePart {
 }
 
 func (part *FilePart) startDownload() error {
-	part.File.Wait.Add(1)
+	part.File.wait.Add(1)
 	go func() {
-		defer part.File.Wait.Done()
+		defer part.File.wait.Done()
 
 		req, _ := http.NewRequest(http.MethodGet, part.File.RemoteURL, nil)
 		req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", part.StartByte, part.EndByte))
-
-		data, _ := httputil.DumpRequest(req, false)
-		fmt.Printf("%s", data)
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
 			log.Println(err)
@@ -50,8 +46,6 @@ func (part *FilePart) startDownload() error {
 		}
 
 		if res.StatusCode != 200 && res.StatusCode != 206 {
-			log.Println(res.StatusCode)
-			log.Println(ErrFilePermission)
 			return
 		}
 
@@ -60,8 +54,10 @@ func (part *FilePart) startDownload() error {
 			log.Println(err)
 			return
 		}
+		defer res.Body.Close()
 		part.FileWriter = fileWriter
 		io.Copy(fileWriter, res.Body)
+		fileWriter.Close()
 	}()
 
 	return nil
