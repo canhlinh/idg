@@ -38,7 +38,9 @@ func (part *FilePart) startDownload() error {
 		defer part.File.wait.Done()
 
 		req, _ := http.NewRequest(http.MethodGet, part.File.RemoteURL, nil)
-		req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", part.StartByte, part.EndByte))
+		if part.File.SupportMultiPart {
+			req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", part.StartByte, part.EndByte))
+		}
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
 			log.Println(err)

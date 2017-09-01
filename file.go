@@ -26,15 +26,16 @@ type FileDler interface {
 }
 
 type File struct {
-	Name            string
-	Size            int64
-	Dir             string
-	RemoteURL       string
-	AcceptRange     bool
-	wait            *sync.WaitGroup
-	FileParts       FileParts
-	DownloadedBytes int64
-	ProgressHandler chan int
+	Name             string
+	Size             int64
+	Dir              string
+	RemoteURL        string
+	AcceptRange      bool
+	wait             *sync.WaitGroup
+	FileParts        FileParts
+	DownloadedBytes  int64
+	ProgressHandler  chan int
+	SupportMultiPart bool
 }
 
 func NewFile(remoteURL string) (*File, error) {
@@ -73,25 +74,34 @@ func (file *File) StartDownload() error {
 
 	if !file.AcceptRange || file.Size <= 0 {
 		parts = 1
+	} else {
+		file.SupportMultiPart = true
 	}
 
-	rangeBytes := file.Size / parts
-	var lastBytes int64
+	if file.SupportMultiPart {
 
-	for part := int64(0); part < parts; part++ {
-		startByte := rangeBytes * part
-		endByte := startByte + rangeBytes
-		if startByte > 0 {
-			startByte++
+		rangeBytes := file.Size / parts
+		var lastBytes int64
+
+		for part := int64(0); part < parts; part++ {
+			startByte := rangeBytes * part
+			endByte := startByte + rangeBytes
+			if startByte > 0 {
+				startByte++
+			}
+			filePart := NewPart(file, part+1, startByte, endByte)
+			file.FileParts = append(file.FileParts, filePart)
+			filePart.startDownload()
+			lastBytes = endByte
 		}
-		filePart := NewPart(file, part+1, startByte, endByte)
-		file.FileParts = append(file.FileParts, filePart)
-		filePart.startDownload()
-		lastBytes = endByte
-	}
 
-	if lastBytes < file.Size {
-		filePart := NewPart(file, parts+1, lastBytes+1, file.Size)
+		if lastBytes < file.Size {
+			filePart := NewPart(file, parts+1, lastBytes+1, file.Size)
+			file.FileParts = append(file.FileParts, filePart)
+			filePart.startDownload()
+		}
+	} else {
+		filePart := NewPart(file, 1, 0, file.Size)
 		file.FileParts = append(file.FileParts, filePart)
 		filePart.startDownload()
 	}
@@ -107,6 +117,10 @@ func (file *File) monitor() {
 		bar := pb.New(int(file.Size)).SetUnits(pb.U_BYTES)
 		bar.ShowSpeed = true
 		bar.ShowFinalTime = false
+		if !file.SupportMultiPart {
+			bar.ShowPercent = false
+			bar.ShowBar = false
+		}
 		bar.Start()
 		defer bar.Finish()
 		for {
