@@ -64,20 +64,15 @@ func NewFile(remoteURL string) (*File, error) {
 	file.Size = res.ContentLength
 	file.Name, err = GetFileName(res)
 
+	if file.AcceptRange && file.Size > 0 {
+		file.SupportMultiPart = true
+	}
+
 	return file, err
 }
 
 func (file *File) StartDownload() error {
-
-	var parts int64
-	parts = DefaultParts
-
-	if !file.AcceptRange || file.Size <= 0 {
-		parts = 1
-	} else {
-		file.SupportMultiPart = true
-	}
-
+	parts := int64(DefaultParts)
 	if file.SupportMultiPart {
 
 		rangeBytes := file.Size / parts

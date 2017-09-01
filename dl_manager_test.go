@@ -16,13 +16,13 @@ func TestStartWorker(t *testing.T) {
 	w := NewWorker(workerPool)
 	w.start()
 
-	var done bool
+	done := make(chan bool)
 	j := func() error {
-		done = true
+		done <- true
 		return nil
 	}
 
 	w.JobChannel <- j
-	assert.True(t, done)
+	<-done
 	w.quit <- true
 }

@@ -27,6 +27,7 @@ func TestStartDownloadPart(t *testing.T) {
 	if err := part.startDownload(); err != nil {
 		t.Fatal(err)
 	}
+	file.monitor()
 	file.Wait()
 
 	reader, err := os.Open(part.getPath())
@@ -37,7 +38,7 @@ func TestStartDownloadPart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	os.Remove(part.getPath())
+	defer os.Remove(part.getPath())
 	assert.Len(t, partData, 1025)
 }
 
