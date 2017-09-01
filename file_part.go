@@ -56,7 +56,7 @@ func (part *FilePart) startDownload() error {
 		}
 		defer res.Body.Close()
 		part.FileWriter = fileWriter
-		io.Copy(fileWriter, res.Body)
+		part.copyBuffer(fileWriter, res.Body)
 		fileWriter.Close()
 	}()
 
@@ -69,6 +69,45 @@ func (part *FilePart) getPath() string {
 
 func (part *FilePart) stopDownload() {
 	part.FileWriter.Close()
+}
+
+func (part *FilePart) copyBuffer(dst io.Writer, src io.Reader) (err error) {
+	// If the reader has a WriteTo method, use it to do the copy.
+	// Avoids an allocation and a copy.
+	if wt, ok := src.(io.WriterTo); ok {
+		wt.WriteTo(dst)
+		return
+	}
+	// Similarly, if the writer has a ReadFrom method, use it to do the copy.
+	if rt, ok := dst.(io.ReaderFrom); ok {
+		rt.ReadFrom(src)
+		return
+	}
+
+	buf := make([]byte, 32*1024)
+
+	for {
+		nr, er := src.Read(buf)
+		if nr > 0 {
+			nw, ew := dst.Write(buf[0:nr])
+			if ew != nil {
+				err = ew
+				break
+			}
+			if nr != nw {
+				err = io.ErrShortWrite
+				break
+			}
+			part.File.ProgressHandler <- nw
+		}
+		if er != nil {
+			if er != io.EOF {
+				err = er
+			}
+			break
+		}
+	}
+	return err
 }
 
 func (s FileParts) Len() int {

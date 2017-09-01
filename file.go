@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	pb "gopkg.in/cheggaaa/pb.v1"
 )
 
 const (
@@ -24,22 +26,25 @@ type FileDler interface {
 }
 
 type File struct {
-	Name        string
-	Size        int64
-	Dir         string
-	RemoteURL   string
-	AcceptRange bool
-	wait        *sync.WaitGroup
-	FileParts   FileParts
+	Name            string
+	Size            int64
+	Dir             string
+	RemoteURL       string
+	AcceptRange     bool
+	wait            *sync.WaitGroup
+	FileParts       FileParts
+	DownloadedBytes int64
+	ProgressHandler chan int
 }
 
 func NewFile(remoteURL string) (*File, error) {
 	var err error
 	file := &File{
-		RemoteURL: remoteURL,
-		Dir:       ".",
-		wait:      &sync.WaitGroup{},
-		FileParts: FileParts{},
+		RemoteURL:       remoteURL,
+		Dir:             ".",
+		wait:            &sync.WaitGroup{},
+		FileParts:       FileParts{},
+		ProgressHandler: make(chan int, DefaultParts),
 	}
 
 	res, err := http.Get(remoteURL)
@@ -91,9 +96,31 @@ func (file *File) StartDownload() error {
 		filePart.startDownload()
 	}
 
+	file.monitor()
 	file.Wait()
-
+	close(file.ProgressHandler)
 	return file.join()
+}
+
+func (file *File) monitor() {
+	go func() {
+		bar := pb.New(int(file.Size)).SetUnits(pb.U_BYTES)
+		bar.ShowSpeed = true
+		bar.ShowFinalTime = false
+		bar.Start()
+		defer bar.Finish()
+		for {
+			select {
+			case nw, ok := <-file.ProgressHandler:
+				if !ok {
+					return
+				}
+				bar.Add(nw)
+				file.DownloadedBytes += int64(nw)
+			}
+		}
+
+	}()
 }
 
 func (file *File) Wait() {
