@@ -36,9 +36,11 @@ type File struct {
 	DownloadedBytes  int64
 	ProgressHandler  chan int
 	SupportMultiPart bool
+	Cookies          []*http.Cookie
+	Path             string
 }
 
-func NewFile(remoteURL string) (*File, error) {
+func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
 	var err error
 	file := &File{
 		RemoteURL:       remoteURL,
@@ -46,9 +48,16 @@ func NewFile(remoteURL string) (*File, error) {
 		wait:            &sync.WaitGroup{},
 		FileParts:       FileParts{},
 		ProgressHandler: make(chan int, DefaultParts),
+		Cookies:         cookies,
 	}
 
-	res, err := http.Get(remoteURL)
+	req, _ := http.NewRequest(http.MethodGet, remoteURL, nil)
+
+	for _, cookie := range cookies {
+		req.AddCookie(cookie)
+	}
+
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -63,6 +72,7 @@ func NewFile(remoteURL string) (*File, error) {
 
 	file.Size = res.ContentLength
 	file.Name, err = GetFileName(res)
+	file.Path = file.getPath()
 
 	if file.AcceptRange && file.Size > 0 {
 		file.SupportMultiPart = true

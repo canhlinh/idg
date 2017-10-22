@@ -41,6 +41,9 @@ func (part *FilePart) startDownload() error {
 		if part.File.SupportMultiPart {
 			req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", part.StartByte, part.EndByte))
 		}
+		for _, cookie := range part.File.Cookies {
+			req.AddCookie(cookie)
+		}
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
 			log.Println(err)
