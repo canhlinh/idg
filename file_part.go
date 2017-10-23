@@ -16,6 +16,7 @@ type FilePart struct {
 	PartNumber int64
 	StartByte  int64
 	EndByte    int64
+	path       string
 	FileWriter io.WriteCloser
 	quit       chan bool
 }
@@ -28,6 +29,7 @@ func NewPart(file *File, partNumber, fromByte, toByte int64) *FilePart {
 		PartNumber: partNumber,
 		StartByte:  fromByte,
 		EndByte:    toByte,
+		path:       fmt.Sprintf("%s/%s.part.%d", file.dir, file.Name, partNumber),
 		quit:       make(chan bool, 1),
 	}
 }
@@ -54,7 +56,7 @@ func (part *FilePart) startDownload() error {
 			return
 		}
 
-		fileWriter, err := os.Create(part.getPath())
+		fileWriter, err := os.Create(part.path)
 		if err != nil {
 			log.Println(err)
 			return
@@ -66,10 +68,6 @@ func (part *FilePart) startDownload() error {
 	}()
 
 	return nil
-}
-
-func (part *FilePart) getPath() string {
-	return fmt.Sprintf("%s/%s.part.%d", part.File.Dir, part.File.Name, part.PartNumber)
 }
 
 func (part *FilePart) stopDownload() {

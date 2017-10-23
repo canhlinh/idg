@@ -31,7 +31,7 @@ func TestNewFile(t *testing.T) {
 	}
 
 	assert.Equal(t, TestRemoteURL, file.RemoteURL)
-	assert.Equal(t, ".", file.Dir)
+	assert.Equal(t, ".", file.dir)
 	assert.NotNil(t, file.Wait)
 	assert.NotNil(t, file.FileParts)
 	assert.True(t, file.Size > 0)
@@ -48,7 +48,7 @@ func TestStartDownload(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fileReader, err := os.Open(file.getPath())
+	fileReader, err := os.Open(file.GetPath())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,5 +58,29 @@ func TestStartDownload(t *testing.T) {
 	}
 
 	assert.Equal(t, TestFileMd5, HashMD5(fileData), "Md5 is not match")
-	os.Remove(TestFileName)
+	os.Remove(file.GetPath())
+}
+
+func TestStartDownloadWithCustomDir(t *testing.T) {
+	file, err := NewFile(TestRemoteURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	file.SetDir("custom_dir")
+
+	if err := file.StartDownload(); err != nil {
+		t.Fatal(err)
+	}
+
+	fileReader, err := os.Open(file.GetPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	fileData, err := ioutil.ReadAll(fileReader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, TestFileMd5, HashMD5(fileData), "Md5 is not match")
+	os.RemoveAll(file.dir)
 }

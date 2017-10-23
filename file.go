@@ -18,6 +18,7 @@ import (
 const (
 	HeaderAcceptRanges = "Accept-Ranges"
 	DefaultParts       = 8
+	DefaultDir         = "."
 )
 
 type FileDler interface {
@@ -28,7 +29,8 @@ type FileDler interface {
 type File struct {
 	Name             string
 	Size             int64
-	Dir              string
+	dir              string
+	path             string
 	RemoteURL        string
 	AcceptRange      bool
 	wait             *sync.WaitGroup
@@ -37,7 +39,6 @@ type File struct {
 	ProgressHandler  chan int
 	SupportMultiPart bool
 	Cookies          []*http.Cookie
-	Path             string
 	MaxPart          int64
 }
 
@@ -45,7 +46,6 @@ func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
 	var err error
 	file := &File{
 		RemoteURL:       remoteURL,
-		Dir:             ".",
 		wait:            &sync.WaitGroup{},
 		FileParts:       FileParts{},
 		ProgressHandler: make(chan int, DefaultParts),
@@ -74,13 +74,19 @@ func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
 
 	file.Size = res.ContentLength
 	file.Name, err = GetFileName(res)
-	file.Path = file.getPath()
+	file.SetDir(DefaultDir)
 
 	if file.AcceptRange && file.Size > 0 {
 		file.SupportMultiPart = true
 	}
 
 	return file, err
+}
+
+func (file *File) SetDir(dir string) {
+	os.MkdirAll(dir, os.ModePerm)
+	file.dir = dir
+	file.path = dir + "/" + file.Name
 }
 
 func (file *File) StartDownload() error {
@@ -149,7 +155,7 @@ func (file *File) Wait() {
 
 func (file *File) join() error {
 
-	fileWriter, err := os.Create(file.getPath())
+	fileWriter, err := os.Create(file.path)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -157,7 +163,7 @@ func (file *File) join() error {
 
 	sort.Sort(file.FileParts)
 	for _, part := range file.FileParts {
-		reader, err := os.Open(part.getPath())
+		reader, err := os.Open(part.path)
 		if err != nil {
 			fmt.Println(err)
 			return err
@@ -165,15 +171,15 @@ func (file *File) join() error {
 		if _, err := io.Copy(fileWriter, reader); err != nil {
 			return err
 		}
-		os.Remove(part.getPath())
+		os.Remove(part.path)
 	}
 
 	fileWriter.Close()
 	return nil
 }
 
-func (file *File) getPath() string {
-	return file.Dir + "/" + file.Name
+func (file *File) GetPath() string {
+	return file.path
 }
 
 func GetFilePartName(fileName string, part int64) string {

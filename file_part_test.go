@@ -30,7 +30,7 @@ func TestStartDownloadPart(t *testing.T) {
 	file.monitor()
 	file.Wait()
 
-	reader, err := os.Open(part.getPath())
+	reader, err := os.Open(part.path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestStartDownloadPart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(part.getPath())
+	defer os.Remove(part.path)
 	assert.Len(t, partData, 1025)
 }
 
@@ -48,5 +48,5 @@ func TestGetPathOfPart(t *testing.T) {
 		t.Fatal(err)
 	}
 	part := NewPart(file, 1, 0, 1024)
-	assert.Equal(t, "./small.mp4.part.1", part.getPath())
+	assert.Equal(t, "./small.mp4.part.1", part.path)
 }
