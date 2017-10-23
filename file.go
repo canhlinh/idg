@@ -38,6 +38,7 @@ type File struct {
 	SupportMultiPart bool
 	Cookies          []*http.Cookie
 	Path             string
+	MaxPart          int64
 }
 
 func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
@@ -49,6 +50,7 @@ func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
 		FileParts:       FileParts{},
 		ProgressHandler: make(chan int, DefaultParts),
 		Cookies:         cookies,
+		MaxPart:         DefaultParts,
 	}
 
 	req, _ := http.NewRequest(http.MethodGet, remoteURL, nil)
@@ -82,13 +84,12 @@ func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
 }
 
 func (file *File) StartDownload() error {
-	parts := int64(DefaultParts)
 	if file.SupportMultiPart {
 
-		rangeBytes := file.Size / parts
+		rangeBytes := file.Size / file.MaxPart
 		var lastBytes int64
 
-		for part := int64(0); part < parts; part++ {
+		for part := int64(0); part < file.MaxPart; part++ {
 			startByte := rangeBytes * part
 			endByte := startByte + rangeBytes
 			if startByte > 0 {
@@ -101,7 +102,7 @@ func (file *File) StartDownload() error {
 		}
 
 		if lastBytes < file.Size {
-			filePart := NewPart(file, parts+1, lastBytes+1, file.Size)
+			filePart := NewPart(file, file.MaxPart+1, lastBytes+1, file.Size)
 			file.FileParts = append(file.FileParts, filePart)
 			filePart.startDownload()
 		}
