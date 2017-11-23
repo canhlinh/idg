@@ -171,7 +171,9 @@ func (file *File) join() error {
 		if _, err := io.Copy(fileWriter, reader); err != nil {
 			return err
 		}
-		os.Remove(part.path)
+		if err := os.Remove(part.path); err != nil {
+			fmt.Println(err)
+		}
 	}
 
 	fileWriter.Close()
