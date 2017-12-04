@@ -27,19 +27,18 @@ type FileDler interface {
 }
 
 type File struct {
-	Name             string
-	Size             int64
-	dir              string
-	path             string
-	RemoteURL        string
-	AcceptRange      bool
-	wait             *sync.WaitGroup
-	FileParts        FileParts
-	DownloadedBytes  int64
-	ProgressHandler  chan int
-	SupportMultiPart bool
-	Cookies          []*http.Cookie
-	MaxPart          int64
+	Name            string
+	Size            int64
+	dir             string
+	path            string
+	RemoteURL       string
+	AcceptRange     bool
+	wait            *sync.WaitGroup
+	FileParts       FileParts
+	DownloadedBytes int64
+	ProgressHandler chan int
+	Cookies         []*http.Cookie
+	maxPart         int64
 }
 
 func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
@@ -50,7 +49,6 @@ func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
 		FileParts:       FileParts{},
 		ProgressHandler: make(chan int, DefaultParts),
 		Cookies:         cookies,
-		MaxPart:         DefaultParts,
 	}
 
 	req, _ := http.NewRequest(http.MethodGet, remoteURL, nil)
@@ -77,10 +75,16 @@ func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
 	file.SetDir(DefaultDir)
 
 	if file.AcceptRange && file.Size > 0 {
-		file.SupportMultiPart = true
+		file.SetPart(DefaultParts)
+	} else {
+		file.SetPart(1)
 	}
 
 	return file, err
+}
+
+func (file *File) SetPart(n int64) {
+	file.maxPart = n
 }
 
 func (file *File) SetDir(dir string) {
@@ -90,12 +94,12 @@ func (file *File) SetDir(dir string) {
 }
 
 func (file *File) StartDownload() error {
-	if file.SupportMultiPart {
+	if file.maxPart > 1 {
 
-		rangeBytes := file.Size / file.MaxPart
+		rangeBytes := file.Size / file.maxPart
 		var lastBytes int64
 
-		for part := int64(0); part < file.MaxPart; part++ {
+		for part := int64(0); part < file.maxPart; part++ {
 			startByte := rangeBytes * part
 			endByte := startByte + rangeBytes
 			if startByte > 0 {
@@ -108,7 +112,7 @@ func (file *File) StartDownload() error {
 		}
 
 		if lastBytes < file.Size {
-			filePart := NewPart(file, file.MaxPart+1, lastBytes+1, file.Size)
+			filePart := NewPart(file, file.maxPart+1, lastBytes+1, file.Size)
 			file.FileParts = append(file.FileParts, filePart)
 			filePart.startDownload()
 		}
@@ -129,7 +133,7 @@ func (file *File) monitor() {
 		bar := pb.New(int(file.Size)).SetUnits(pb.U_BYTES)
 		bar.ShowSpeed = true
 		bar.ShowFinalTime = false
-		if !file.SupportMultiPart {
+		if file.maxPart <= 1 {
 			bar.ShowPercent = false
 			bar.ShowBar = false
 		}

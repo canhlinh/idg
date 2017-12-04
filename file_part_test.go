@@ -42,6 +42,24 @@ func TestStartDownloadPart(t *testing.T) {
 	assert.Len(t, partData, 1025)
 }
 
+func TestStartDownloadPartDie(t *testing.T) {
+	file, err := NewFile(TestRemoteURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	part1 := NewPart(file, 2, 0, 1024/2)
+	if err := part1.startDownload(); err != nil {
+		t.Fatal(err)
+	}
+	file.RemoteURL = ""
+	part2 := NewPart(file, 2, part1.StartByte+1, 1024)
+	if err := part2.startDownload(); err != nil {
+		t.Fatal(err)
+	}
+	file.monitor()
+	file.Wait()
+}
+
 func TestGetPathOfPart(t *testing.T) {
 	file, err := NewFile(TestRemoteURL)
 	if err != nil {
