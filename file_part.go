@@ -59,11 +59,14 @@ func (part *FilePart) startDownload() error {
 		for _, cookie := range part.File.Cookies {
 			req.AddCookie(cookie)
 		}
+
+		part.File.mutex.Lock()
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
-			log.Println(err)
+			part.File.mutex.Unlock()
 			goto TRY_DOWNLOAD
 		}
+		part.File.mutex.Unlock()
 
 		if res.StatusCode != 200 && res.StatusCode != 206 {
 			goto TRY_DOWNLOAD

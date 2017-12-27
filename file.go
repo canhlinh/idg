@@ -39,6 +39,7 @@ type File struct {
 	ProgressHandler chan int
 	Cookies         []*http.Cookie
 	maxPart         int64
+	mutex           *sync.Mutex
 }
 
 func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
@@ -49,6 +50,7 @@ func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
 		FileParts:       FileParts{},
 		ProgressHandler: make(chan int, DefaultParts),
 		Cookies:         cookies,
+		mutex:           &sync.Mutex{},
 	}
 
 	req, _ := http.NewRequest(http.MethodGet, remoteURL, nil)
