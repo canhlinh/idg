@@ -3,6 +3,7 @@ package idg
 import (
 	"fmt"
 	"io"
+	"math"
 	"mime"
 	"net/http"
 	"os"
@@ -99,7 +100,7 @@ func (file *File) StartDownload() error {
 	if file.maxPart > 1 {
 
 		rangeBytes := file.Size / file.maxPart
-		var lastBytes int64
+		lastBytes := int64(math.Mod(float64(file.Size), float64(file.maxPart)))
 
 		for part := int64(0); part < file.maxPart; part++ {
 			startByte := rangeBytes * part
@@ -110,11 +111,10 @@ func (file *File) StartDownload() error {
 			filePart := NewPart(file, part+1, startByte, endByte)
 			file.FileParts = append(file.FileParts, filePart)
 			filePart.startDownload()
-			lastBytes = endByte
 		}
 
-		if lastBytes < file.Size {
-			filePart := NewPart(file, file.maxPart+1, lastBytes+1, file.Size)
+		if lastBytes > 0 {
+			filePart := NewPart(file, file.maxPart+1, file.Size-lastBytes+1, file.Size)
 			file.FileParts = append(file.FileParts, filePart)
 			filePart.startDownload()
 		}
