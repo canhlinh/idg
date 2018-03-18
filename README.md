@@ -1,7 +1,7 @@
 # idg
-Fast file download implementation in Golang.
+A simple tool that support you download file at very fast speed was implemented by Golang.
 
-### Run uni test
+### Run test
 ```
 Make test
 ```
@@ -18,3 +18,4 @@ Make test
 	}
 	time.Sleep(time.Second)
 ```
+![example](sample/sample.gif)
