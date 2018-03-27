@@ -60,7 +60,7 @@ func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
 		req.AddCookie(cookie)
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := http.DefaultTransport.RoundTrip(req)
 	if err != nil {
 		return nil, err
 	}
