@@ -63,6 +63,7 @@ func (part *FilePart) startDownload() error {
 		part.File.mutex.Lock()
 		res, err := http.DefaultTransport.RoundTrip(req)
 		if err != nil {
+			log.Println(err)
 			part.File.mutex.Unlock()
 			goto TRY_DOWNLOAD
 		}

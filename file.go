@@ -3,7 +3,6 @@ package idg
 import (
 	"fmt"
 	"io"
-	"math"
 	"mime"
 	"net/http"
 	"os"
@@ -44,6 +43,7 @@ type File struct {
 }
 
 func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
+
 	var err error
 	file := &File{
 		RemoteURL:       remoteURL,
@@ -100,7 +100,6 @@ func (file *File) StartDownload() error {
 	if file.maxPart > 1 {
 
 		rangeBytes := file.Size / file.maxPart
-		lastBytes := int64(math.Mod(float64(file.Size), float64(file.maxPart)))
 
 		for part := int64(0); part < file.maxPart; part++ {
 			startByte := rangeBytes * part
@@ -108,13 +107,11 @@ func (file *File) StartDownload() error {
 			if startByte > 0 {
 				startByte++
 			}
-			filePart := NewPart(file, part+1, startByte, endByte)
-			file.FileParts = append(file.FileParts, filePart)
-			filePart.startDownload()
-		}
+			if part == file.maxPart-1 {
+				endByte = file.Size
+			}
 
-		if lastBytes > 0 {
-			filePart := NewPart(file, file.maxPart+1, file.Size-lastBytes+1, file.Size)
+			filePart := NewPart(file, part+1, startByte, endByte)
 			file.FileParts = append(file.FileParts, filePart)
 			filePart.startDownload()
 		}
