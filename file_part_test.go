@@ -43,7 +43,7 @@ func TestStartDownloadPart(t *testing.T) {
 }
 
 func TestStartDownloadPartDie(t *testing.T) {
-	file, err := NewFile(TestRemoteURL)
+	file, err := NewFile("")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestStartDownloadPartDie(t *testing.T) {
 	if err := part1.startDownload(); err != nil {
 		t.Fatal(err)
 	}
-	file.RemoteURL = ""
+
 	part2 := NewPart(file, 2, part1.StartByte+1, 1024)
 	if err := part2.startDownload(); err != nil {
 		t.Fatal(err)
