@@ -53,6 +53,11 @@ func (part *FilePart) startDownload() error {
 		}
 
 		req, _ := http.NewRequest(http.MethodGet, part.File.RemoteURL, nil)
+		if part.File.header != nil {
+			for key, value := range part.File.header {
+				req.Header.Add(key, value)
+			}
+		}
 		if part.File.maxPart > 1 {
 			req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", part.StartByte, part.EndByte))
 		}

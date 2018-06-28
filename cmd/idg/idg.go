@@ -23,7 +23,7 @@ func init() {
 }
 
 func main() {
-	file, err := idg.NewFile(downloadUrl)
+	file, err := idg.NewFile(downloadUrl, nil, nil)
 	file.SetPart(20)
 	if err != nil {
 		log.Fatal(err)

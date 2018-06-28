@@ -38,11 +38,12 @@ type File struct {
 	DownloadedBytes int64
 	ProgressHandler chan int
 	Cookies         []*http.Cookie
+	header          map[string]string
 	maxPart         int64
 	mutex           *sync.Mutex
 }
 
-func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
+func NewFile(remoteURL string, cookies []*http.Cookie, header map[string]string) (*File, error) {
 
 	var err error
 	file := &File{
@@ -51,10 +52,14 @@ func NewFile(remoteURL string, cookies ...*http.Cookie) (*File, error) {
 		FileParts:       FileParts{},
 		ProgressHandler: make(chan int, DefaultParts),
 		Cookies:         cookies,
+		header:          header,
 		mutex:           &sync.Mutex{},
 	}
 
 	req, _ := http.NewRequest(http.MethodGet, remoteURL, nil)
+	for key, value := range header {
+		req.Header.Add(key, value)
+	}
 
 	for _, cookie := range cookies {
 		req.AddCookie(cookie)
