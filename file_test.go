@@ -25,7 +25,7 @@ func TestMain(m *testing.M) {
 
 func TestNewFile(t *testing.T) {
 
-	file, err := NewFile(TestRemoteURL)
+	file, err := NewFile(TestRemoteURL, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,10 +36,15 @@ func TestNewFile(t *testing.T) {
 	assert.NotNil(t, file.FileParts)
 	assert.True(t, file.Size > 0)
 	assert.Equal(t, TestFileName, file.Name)
+	assert.Nil(t, file.header)
+
+	header := map[string]string{"a": "a", "b": "b"}
+	file2, _ := NewFile(TestRemoteURL, nil, header)
+	assert.Equal(t, header, file2.header)
 }
 
 func TestStartDownload(t *testing.T) {
-	file, err := NewFile(TestRemoteURL)
+	file, err := NewFile(TestRemoteURL, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,12 +62,13 @@ func TestStartDownload(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	t.Log(len(fileData))
 	assert.Equal(t, TestFileMd5, HashMD5(fileData), "Md5 is not match")
 	os.Remove(file.GetPath())
 }
 
 func TestStartDownloadWithCustomDir(t *testing.T) {
-	file, err := NewFile(TestRemoteURL)
+	file, err := NewFile(TestRemoteURL, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

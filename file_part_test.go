@@ -6,7 +6,7 @@ import "os"
 import "io/ioutil"
 
 func TestNewPart(t *testing.T) {
-	file, err := NewFile(TestRemoteURL)
+	file, err := NewFile(TestRemoteURL, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -19,7 +19,7 @@ func TestNewPart(t *testing.T) {
 }
 
 func TestStartDownloadPart(t *testing.T) {
-	file, err := NewFile(TestRemoteURL)
+	file, err := NewFile(TestRemoteURL, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,11 +39,11 @@ func TestStartDownloadPart(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(part.path)
-	assert.Len(t, partData, 1025)
+	assert.Equal(t, len(partData), 1025)
 }
 
 func TestStartDownloadPartDie(t *testing.T) {
-	file, err := NewFile("")
+	file, err := NewFile(TestRemoteURL, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestStartDownloadPartDie(t *testing.T) {
 }
 
 func TestGetPathOfPart(t *testing.T) {
-	file, err := NewFile(TestRemoteURL)
+	file, err := NewFile(TestRemoteURL, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
