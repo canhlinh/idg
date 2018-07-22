@@ -3,10 +3,13 @@ package idg
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"time"
+)
+
+const (
+	ReTriesDownload = 10
 )
 
 type FilePartResult struct {
@@ -46,11 +49,6 @@ func (part *FilePart) startDownload() error {
 
 	TRY_DOWNLOAD:
 		part.attempt++
-		if part.attempt > 3 {
-			return
-		} else if part.attempt > 1 {
-			time.Sleep(time.Second)
-		}
 
 		req, _ := http.NewRequest(http.MethodGet, part.File.RemoteURL, nil)
 		if part.File.header != nil {
@@ -58,6 +56,7 @@ func (part *FilePart) startDownload() error {
 				req.Header.Add(key, value)
 			}
 		}
+
 		if part.File.maxPart > 1 {
 			req.Header.Add("Range", fmt.Sprintf("bytes=%d-%d", part.StartByte, part.EndByte))
 		}
@@ -68,8 +67,12 @@ func (part *FilePart) startDownload() error {
 		part.File.mutex.Lock()
 		res, err := http.DefaultTransport.RoundTrip(req)
 		if err != nil {
-			log.Println(err)
 			part.File.mutex.Unlock()
+			if part.attempt > ReTriesDownload {
+				part.File.errorListener <- err
+				return
+			}
+			time.Sleep(3 * time.Second)
 			goto TRY_DOWNLOAD
 		}
 		part.File.mutex.Unlock()
@@ -80,13 +83,25 @@ func (part *FilePart) startDownload() error {
 
 		fileWriter, err := os.Create(part.path)
 		if err != nil {
-			log.Println(err)
+			if part.attempt > ReTriesDownload {
+				part.File.errorListener <- err
+				return
+			}
+			time.Sleep(3 * time.Second)
 			goto TRY_DOWNLOAD
 		}
 		defer res.Body.Close()
+		defer fileWriter.Close()
+
 		part.FileWriter = fileWriter
-		part.copyBuffer(fileWriter, res.Body)
-		fileWriter.Close()
+		if err := part.copyBuffer(fileWriter, res.Body); err != nil {
+			if part.attempt > ReTriesDownload {
+				part.File.errorListener <- err
+				return
+			}
+			time.Sleep(3 * time.Second)
+			goto TRY_DOWNLOAD
+		}
 	}()
 
 	return nil
