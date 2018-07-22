@@ -26,6 +26,9 @@ type FileDler interface {
 	StopDownload()
 }
 
+// ErrorListener Handler error from a download part
+type ErrorListener chan error
+
 type File struct {
 	Name            string
 	Size            int64
@@ -41,6 +44,7 @@ type File struct {
 	header          map[string]string
 	maxPart         int64
 	mutex           *sync.Mutex
+	errorListener   ErrorListener
 }
 
 func NewFile(remoteURL string, cookies []*http.Cookie, header map[string]string) (*File, error) {
@@ -102,8 +106,8 @@ func (file *File) SetDir(dir string) {
 }
 
 func (file *File) StartDownload() error {
+	file.errorListener = make(ErrorListener, file.maxPart)
 	if file.maxPart > 1 {
-
 		rangeBytes := file.Size / file.maxPart
 
 		for part := int64(0); part < file.maxPart; part++ {
@@ -127,8 +131,10 @@ func (file *File) StartDownload() error {
 	}
 
 	file.monitor()
-	file.Wait()
-	close(file.ProgressHandler)
+	defer close(file.ProgressHandler)
+	if err := file.Wait(); err != nil {
+		return err
+	}
 	return file.join()
 }
 
@@ -157,8 +163,23 @@ func (file *File) monitor() {
 	}()
 }
 
-func (file *File) Wait() {
-	file.wait.Wait()
+// Wait waits download done
+func (file *File) Wait() error {
+	select {
+	case <-wait(file.wait):
+		return nil
+	case err := <-file.errorListener:
+		return err
+	}
+}
+
+func wait(wg *sync.WaitGroup) chan struct{} {
+	c := make(chan struct{})
+	go func() {
+		wg.Wait()
+		c <- struct{}{}
+	}()
+	return c
 }
 
 func (file *File) join() error {
