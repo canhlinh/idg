@@ -95,12 +95,8 @@ func (part *FilePart) startDownload() error {
 
 		part.FileWriter = fileWriter
 		if err := part.copyBuffer(fileWriter, res.Body); err != nil {
-			if part.attempt > ReTriesDownload {
-				part.File.errorListener <- err
-				return
-			}
-			time.Sleep(3 * time.Second)
-			goto TRY_DOWNLOAD
+			part.File.errorListener <- err
+			return
 		}
 	}()
 
