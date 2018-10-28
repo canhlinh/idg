@@ -6,7 +6,7 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.11
-    working_directory: /go/src/github.com/canhlinh/idg
+    working_directory: /src/idg
     steps:
       - checkout
       - run: go test -v ./...
