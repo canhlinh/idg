@@ -1,6 +1,9 @@
 # idg
 A simple tool that support you download file at very fast speed was implemented by Golang.
 
+[![Build Status](https://circleci.com/gh/canhlinh/idg.svg?style=svg)](https://circleci.com/gh/canhlinh/idg)
+[![GoDoc](https://godoc.org/github.com/canhlinh/idg?status.svg)](http://godoc.org/github.com/github.com/canhlinh/idg)
+
 ### Run test
 ```
 Make test
