@@ -4,7 +4,6 @@ import (
 	"flag"
 	"log"
 	"net/url"
-	"time"
 
 	"github.com/canhlinh/idg"
 )
@@ -23,14 +22,8 @@ func init() {
 }
 
 func main() {
-	file, err := idg.NewFile(downloadUrl, nil, nil)
-	file.SetPart(20)
-	if err != nil {
-		log.Fatal(err)
+	file := idg.NewFile(downloadUrl, nil, nil)
+	if _, err := idg.DownloadSingleFile(file, "./", 4); err != nil {
+		panic(err)
 	}
-
-	if err := file.StartDownload(); err != nil {
-		log.Fatal(err)
-	}
-	time.Sleep(time.Second)
 }
