@@ -7,6 +7,7 @@ func init() {
 }
 
 // IDG present an internet download manager
+// TODO: Implement a feature to support downloading many files in concurrent
 type IDG struct {
 	MaxWorkers int
 }

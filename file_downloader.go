@@ -110,6 +110,9 @@ func (fileDownloader *FileDownloader) parseFile() error {
 	fileDownloader.File.AcceptRange = isAcceptByteRange(res)
 	fileDownloader.File.Size = res.ContentLength
 
+	// Update URL. It might be changed if the request has been redirected
+	fileDownloader.File.URL = res.Request.URL.String()
+
 	if fileDownloader.File.Size == 0 {
 		return errors.New("Failed to get the file's size")
 	}
