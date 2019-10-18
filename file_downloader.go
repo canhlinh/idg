@@ -46,7 +46,7 @@ func NewFileDownloader(file *File, dir string, maxConnections int) *FileDownload
 // Download download a file
 func (fileDownloader *FileDownloader) Download() (string, error) {
 	if err := fileDownloader.parseFile(); err != nil {
-		return "", nil
+		return "", err
 	}
 
 	if !fileDownloader.File.AcceptRange {
@@ -75,7 +75,7 @@ LOOP:
 
 	filePath, err := fileDownloader.join(downloadedParts)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	fileDownloader.File.DiskPath = filePath
