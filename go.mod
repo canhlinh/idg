@@ -11,3 +11,5 @@ require (
 	golang.org/x/sys v0.0.0-20181026203630-95b1ffbd15a5 // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.26
 )
+
+go 1.13

@@ -241,15 +241,16 @@ func (fileDownloader *FileDownloader) join(parts []*FilePart) (string, error) {
 
 	for _, part := range parts {
 
-		bytes, err := getFileBytes(part.DiskPath)
+		i, err := os.Open(part.DiskPath)
 		if err != nil {
 			return "", err
 		}
 
-		if _, err := file.Write(bytes); err != nil {
+		if _, err := io.Copy(file, i); err != nil {
 			return "", err
 		}
 
+		i.Close()
 		if err := os.RemoveAll(part.DiskPath); err != nil {
 			return "", err
 		}
